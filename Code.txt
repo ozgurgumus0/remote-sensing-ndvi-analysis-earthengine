@@ -1,0 +1,235 @@
+/*
+Intelligent Sensing and Remote Sensing Project
+Ozgur Gumus - Ghazaleh Monsef Shemordeh
+17/06/2024
+*/
+
+// AUTOMATICALLY GENERATED: location from saved link.
+Map.setCenter(9.246919916197896, 45.497402531466214, 16);
+
+// Define the area of interest (Parco Lambro, Milan)
+var aoi = ee.Geometry.Polygon([
+  [9.25507, 45.49824], 
+  [9.25367, 45.49871], 
+  [9.25264, 45.50164], 
+  [9.24727, 45.50073],
+  [9.24764, 45.49938],
+  [9.24550, 45.49916],
+  [9.24657, 45.49640],
+  [9.24008, 45.49571],
+  [9.24134, 45.49249],
+  [9.24567, 45.49317],
+  [9.24615, 45.49161],
+  [9.25230, 45.49187],
+  [9.25507, 45.49824]
+]);
+
+// Define the time period (Spring-Summer 2022/2023)
+var startDate = '2022-03-01';
+var endDate = '2023-08-31';
+
+// Filter Sentinel-2 data for the area of interest and time period
+var sentinel2 = ee.ImageCollection('COPERNICUS/S2_HARMONIZED')
+  .filterDate(startDate, endDate)
+  .filterBounds(aoi)
+  .filter(ee.Filter.lt('CLOUDY_PIXEL_PERCENTAGE', 15));
+
+// Function to calculate NDVI
+var calculateNDVI = function(image) {
+  var ndvi = image.normalizedDifference(['B8', 'B4']).rename('NDVI');
+  return image.addBands(ndvi);
+};
+
+// Apply NDVI calculation to the image collection
+var sentinel2NDVI = sentinel2.map(calculateNDVI);
+print(sentinel2NDVI);
+
+// Generate NDVI time series
+var ndviTimeSeries = sentinel2NDVI.select('NDVI').map(function(image) {
+  var date = ee.Date(image.get('system:time_start')).format('YYYY-MM-dd');
+  var meanNDVI = image.reduceRegion({
+    reducer: ee.Reducer.mean(),
+    geometry: aoi,
+    scale: 10
+  }).get('NDVI');
+  
+  return ee.Feature(null, {date: date, NDVI: meanNDVI});
+});
+
+print(ndviTimeSeries);
+
+var chart = ui.Chart.feature.byFeature(ndviTimeSeries, 'date', 'NDVI')
+  .setOptions({
+    title: 'NDVI Time Series (Spring-Summer 2022/2023)',
+    hAxis: {title: 'Date', format: 'yyyy-MM-dd', gridlines: {count: 7}},
+    vAxis: {title: 'NDVI'},
+    lineWidth: 1,
+    pointSize: 3
+  });
+
+print(chart);
+Map.centerObject(aoi, 15);
+
+// Get the median NDVI value for the entire period
+var medianNDVI = sentinel2NDVI.select('NDVI').median().clip(aoi);
+print(medianNDVI);
+
+// Display the median NDVI
+Map.centerObject(aoi, 15);
+Map.addLayer(medianNDVI, {min: 0, max: 1, palette: ['white', 'green']}, 'Median NDVI');
+
+// Define training points for trees, meadows, and bushes
+var trees = ee.FeatureCollection([
+  ee.Feature(ee.Geometry.Point([9.25179, 45.49655]), {'class': 0}),
+  ee.Feature(ee.Geometry.Point([9.24227, 45.49482]), {'class': 0}),
+  ee.Feature(ee.Geometry.Point([9.25218, 45.49893]), {'class': 0}),
+  ee.Feature(ee.Geometry.Point([9.24847, 45.49344]), {'class': 0}),
+  ee.Feature(ee.Geometry.Point([9.24196, 45.49473]), {'class': 0}),
+  ee.Feature(ee.Geometry.Point([9.24741, 45.49720]), {'class': 0}),
+  ee.Feature(ee.Geometry.Point([9.24967, 45.49864]), {'class': 0}),
+  ee.Feature(ee.Geometry.Point([9.25220, 45.49893]), {'class': 0}),
+  ee.Feature(ee.Geometry.Point([9.24395, 45.49412]), {'class': 0}),
+  ee.Feature(ee.Geometry.Point([9.25275, 45.49630]), {'class': 0})
+]);
+
+var meadows = ee.FeatureCollection([
+  ee.Feature(ee.Geometry.Point([9.25061, 45.49345]), {'class': 1}),
+  ee.Feature(ee.Geometry.Point([9.25140, 45.49749]), {'class': 1}),
+  ee.Feature(ee.Geometry.Point([9.25064, 45.50074]), {'class': 1}),
+  ee.Feature(ee.Geometry.Point([9.24610, 45.49534]), {'class': 1}),
+  ee.Feature(ee.Geometry.Point([9.24984, 45.49333]), {'class': 1}),
+  ee.Feature(ee.Geometry.Point([9.25134, 45.49334]), {'class': 1}),
+  ee.Feature(ee.Geometry.Point([9.24932, 45.49633]), {'class': 1}),
+  ee.Feature(ee.Geometry.Point([9.25053, 45.49245]), {'class': 1}),
+  ee.Feature(ee.Geometry.Point([9.25219, 45.49833]), {'class': 1}),
+  ee.Feature(ee.Geometry.Point([9.24662, 45.49416]), {'class': 1})
+]);
+
+var bushes = ee.FeatureCollection([
+  ee.Feature(ee.Geometry.Point([9.24257, 45.49312]), {'class': 2}),
+  ee.Feature(ee.Geometry.Point([9.24152, 45.49274]), {'class': 2}),
+  ee.Feature(ee.Geometry.Point([9.24157, 45.49322]), {'class': 2}),
+  ee.Feature(ee.Geometry.Point([9.24186, 45.49278]), {'class': 2}),
+  ee.Feature(ee.Geometry.Point([9.24128, 45.49362]), {'class': 2}),
+  ee.Feature(ee.Geometry.Point([9.24264, 45.49355]), {'class': 2}),
+  ee.Feature(ee.Geometry.Point([9.24334, 45.49316]), {'class': 2}),
+  ee.Feature(ee.Geometry.Point([9.24362, 45.49301]), {'class': 2}),
+  ee.Feature(ee.Geometry.Point([9.24187, 45.49329]), {'class': 2}),
+  ee.Feature(ee.Geometry.Point([9.24138, 45.49341]), {'class': 2})
+]);
+
+var trainingPoints = trees.merge(meadows).merge(bushes);
+
+// Display training points on the map
+Map.addLayer(trees, {color: 'red'}, 'Trees Training Points');
+Map.addLayer(meadows, {color: 'yellow'}, 'Meadows Training Points');
+Map.addLayer(bushes, {color: 'blue'}, 'Bushes Training Points');
+
+// Sample the NDVI image at the training points
+var trainingData = medianNDVI.sampleRegions({
+  collection: trainingPoints,
+  properties: ['class'],
+  scale: 10
+});
+
+// Train a Random Forest classifier
+var classifierRF = ee.Classifier.smileRandomForest(50).train({
+  features: trainingData,
+  classProperty: 'class',
+  inputProperties: ['NDVI']
+});
+
+// Train a Support Vector Machine (SVM) classifier
+var classifierSVM = ee.Classifier.libsvm().train({
+  features: trainingData,
+  classProperty: 'class',
+  inputProperties: ['NDVI']
+});
+
+// Classify the median NDVI image using both classifiers
+var classifiedRF = medianNDVI.classify(classifierRF);
+var classifiedSVM = medianNDVI.classify(classifierSVM);
+
+// Display the classification results
+Map.addLayer(classifiedRF, {min: 0, max: 2, palette: ['green', 'yellow', 'blue']}, 'Random Forest Classification');
+Map.addLayer(classifiedSVM, {min: 0, max: 2, palette: ['green', 'yellow', 'blue']}, 'SVM Classification');
+
+// Function to evaluate the classifier
+var evaluateClassifier = function(classifier, trainingData, name) {
+  var validated = trainingData.classify(classifier);
+  var validation = validated.errorMatrix('class', 'classification');
+  print(name + ' Error Matrix:', validation);
+  print(name + ' Accuracy:', validation.accuracy());
+  print(name + ' Kappa:', validation.kappa());
+};
+
+// Evaluate both classifiers
+evaluateClassifier(classifierRF, trainingData, 'Random Forest');
+evaluateClassifier(classifierSVM, trainingData, 'SVM');
+
+// Function to classify an image and calculate the area of each class
+var classifyAndCalculateArea = function(image) {
+  var classified = image.classify(classifierRF).clip(aoi);
+  var date = ee.Date(image.get('system:time_start')).format('YYYY-MM-dd');
+  
+  var area = classified.reduceRegion({
+    reducer: ee.Reducer.frequencyHistogram(),
+    geometry: aoi,
+    scale: 10,
+    bestEffort: true
+  }).get('classification');
+  
+  return ee.Feature(null, {date: date, area: area});
+};
+
+// Apply classification and area calculation to each image
+var classifiedAreas = sentinel2NDVI.map(classifyAndCalculateArea);
+
+// Convert the results to a FeatureCollection for charting
+var classifiedAreasCollection = ee.FeatureCollection(classifiedAreas);
+
+// Print the classified areas collection to the console
+print('Classified Areas Collection:', classifiedAreasCollection);
+
+// Define a function to transform the histogram into a more readable format
+var transformHistogram = function(feature) {
+  var areaDict = ee.Dictionary(feature.get('area'));
+  var totalArea = ee.Number(areaDict.values().reduce(ee.Reducer.sum()));
+  var classes = ee.List(['0', '1', '2']);
+  var areaByClass = classes.map(function(classId) {
+    var area = ee.Number(areaDict.get(classId, 0)).divide(10000);  // Convert m² to ha
+    return ee.Feature(null, {class: classId, date: feature.get('date'), area: area});
+  });
+  return ee.FeatureCollection(areaByClass);
+};
+
+// Transform the classified areas into a more readable format
+var transformedAreas = classifiedAreasCollection.map(transformHistogram).flatten();
+
+// Print the transformed areas to the console
+print('Transformed Areas:', transformedAreas);
+
+// Chart the area of each class over time
+var chart = ui.Chart.feature.groups({
+  features: transformedAreas,
+  xProperty: 'date',
+  yProperty: 'area',
+  seriesProperty: 'class'
+}).setOptions({
+  title: 'Area of Vegetation Classes Over Time',
+  hAxis: {title: 'Date'},
+  vAxis: {title: 'Area (ha)'},
+  lineWidth: 1,
+  pointSize: 3,
+  series: {
+    '0': {label: 'Trees', color: 'green'},
+    '1': {label: 'Meadows', color: 'yellow'},
+    '2': {label: 'Bushes', color: 'blue'}
+  }
+});
+
+// Add the chart to the map
+print(chart);
+
+// Center the map on the area of interest
+Map.centerObject(aoi, 15);
