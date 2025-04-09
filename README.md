@@ -69,4 +69,4 @@ See [`report/Ozgur_Ghazaleh_Project.docx`](./report/Ozgur_Ghazaleh_Project.docx)
 
 ---
 
-Ozgur Gunus
+Ozgur Gumus
